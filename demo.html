@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>文件上传</title>
+    <style>
+    *{
+        margin: 0;
+        padding: 0;
+        text-decoration: none;
+    }
+    .img-wrapper {
+        width: 400px;
+    }
+    .uploading {
+        margin: 40px 0;
+        display: flex;
+        flex-direction: row;
+    }
+    .uploading-info {
+        display: flex;
+        justify-content: space-between;
+    }
+    .uploading-image {
+        width: 60px;
+        height: 60px;
+    }
+    .uploading-name {
+        margin: 0 10px;
+        width: 250px;
+    }
+    .copy {
+        color: #3890ff;
+        cursor: pointer;
+    }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>文件上传</h1>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="pic" multiple ref="pic">
+            <input type="button" @click="uploadFile" value="上传">
+        </form>
+        <h1>图片列表</h1>
+        <div class="img-wrapper">
+            <div class="uploading" v-for="(item, index) in urlList" :key="index" >
+                <div class="uploading-image" style="background-size: 60px 60px;" v-bind:style="{ backgroundImage: 'url(' + item.url + ')' }"></div>
+                <div class="uploading-info">
+                    <span class="uploading-name"> <a target="_blank" :href="item.url">{{ item.name }}</a></span>
+                    <span class="copy":data-clipboard-text="'127.0.0.1:3000/' + item.url">复制</span>
+                </div>
+            </div>
+        </div>
+        <div class="download">
+            <button @click="downloadURL">图片链接导出Excel</button>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script>
+    <script src="./static/xlsx.js"></script>
+    <script>
+        new ClipboardJS('.copy');
+        function uploadImg(data, urlList) {
+            var formData = new FormData();
+            formData.append("pic", data);
+            axios.post('/upload', formData, {
+                headers: {
+                "Content-Type": "multipart/form-data"
+                }
+            })
+            .then( (res) => {
+                console.log(res.data);
+                urlList.push(res.data);
+                console.log(urlList);
+            })
+            .catch( (err) => {
+                console.log(err);
+            });
+
+        }
+
+        var vm = new Vue({
+            el: "#app",
+            data: {
+                urlList:[]
+            },
+            methods: {
+                uploadFile () {
+                    var imgs = this.$refs.pic.files;
+                    for(let i = 0; i < imgs.length; i++) {
+                        let file = imgs[i];
+                        uploadImg(file, this.$data.urlList);
+                    }
+                },
+                downloadURL () {
+                    var imgURLS = [];
+                    imgURLS.push(["序号", "图片名称", "URL链接"]);
+                    this.$data.urlList.forEach((item, index) => {
+                        var url = [index+1].concat(item.name, item.url);
+                        imgURLS.push(url);
+                    });
+                    console.log(imgURLS);
+                    const ws = XLSX.utils.aoa_to_sheet(imgURLS);
+                    var wscols = [
+                        {wch:6},
+                        {wch:50},
+                        {wch:50}
+                    ];
+                    ws['!cols'] = wscols;
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "SheetJS");
+                    XLSX.writeFile(wb, "export.xlsx");
+                }
+            }
+        });
+    </script>
+</body>
+</html>
