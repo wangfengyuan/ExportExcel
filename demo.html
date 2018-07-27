@@ -90,27 +90,34 @@
                 uploadFile () {
                     var imgs = this.$refs.pic.files;
                     for(let i = 0; i < imgs.length; i++) {
+                        //逐个获取图片并上传
                         let file = imgs[i];
                         uploadImg(file, this.$data.urlList);
                     }
                 },
                 downloadURL () {
                     var imgURLS = [];
+                    //设置excel标题
                     imgURLS.push(["序号", "图片名称", "URL链接"]);
+                    //获取所有图片url链接信息
                     this.$data.urlList.forEach((item, index) => {
                         var url = [index+1].concat(item.name, item.url);
                         imgURLS.push(url);
                     });
-                    console.log(imgURLS);
+                    //生成工作表结构
                     const ws = XLSX.utils.aoa_to_sheet(imgURLS);
+                    //设置三列单元格宽度
                     var wscols = [
                         {wch:6},
                         {wch:50},
                         {wch:50}
                     ];
                     ws['!cols'] = wscols;
+                    //生成excel基本数据结构
                     const wb = XLSX.utils.book_new();
+                    //生成表名字为SheetJS的excel工作区
                     XLSX.utils.book_append_sheet(wb, ws, "SheetJS");
+                    //导出excel
                     XLSX.writeFile(wb, "export.xlsx");
                 }
             }
