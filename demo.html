@@ -1,40 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>文件上传</title>
     <style>
-    *{
-        margin: 0;
-        padding: 0;
-        text-decoration: none;
-    }
-    .img-wrapper {
-        width: 400px;
-    }
-    .uploading {
-        margin: 40px 0;
-        display: flex;
-        flex-direction: row;
-    }
-    .uploading-info {
-        display: flex;
-        justify-content: space-between;
-    }
-    .uploading-image {
-        width: 60px;
-        height: 60px;
-    }
-    .uploading-name {
-        margin: 0 10px;
-        width: 250px;
-    }
-    .copy {
-        color: #3890ff;
-        cursor: pointer;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            text-decoration: none;
+        }
+        
+        .img-wrapper {
+            width: 400px;
+        }
+        
+        .uploading {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: row;
+        }
+        
+        .uploading-info {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .uploading-image {
+            width: 60px;
+            height: 60px;
+        }
+        
+        .uploading-name {
+            margin: 0 10px;
+            width: 250px;
+        }
+        
+        .copy {
+            color: #3890ff;
+            cursor: pointer;
+        }
     </style>
 </head>
+
 <body>
     <div id="app">
         <h1>文件上传</h1>
@@ -44,11 +52,15 @@
         </form>
         <h1>图片列表</h1>
         <div class="img-wrapper">
-            <div class="uploading" v-for="(item, index) in urlList" :key="index" >
-                <div class="uploading-image" style="background-size: 60px 60px;" v-bind:style="{ backgroundImage: 'url(' + item.url + ')' }"></div>
+            <div class="uploading" v-for="(item, index) in urlList" :key="index">
+                <div>
+                    <img class="uploading-image" :src="item.src" alt="">
+                </div>
                 <div class="uploading-info">
-                    <span class="uploading-name"> <a target="_blank" :href="item.url">{{ item.name }}</a></span>
-                    <span class="copy":data-clipboard-text="'127.0.0.1:3000/' + item.url">复制</span>
+                    <span class="uploading-name">
+                        <a target="_blank" :href="item.src">{{ item.name }}</a>
+                    </span>
+                    <span class="copy" :data-clipboard-text="item.url">复制</span>
                 </div>
             </div>
         </div>
@@ -61,57 +73,74 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script>
     <script src="./static/xlsx.js"></script>
     <script>
+        //生成一个剪切板实例对应class为copym,其剪切内容为元素data-clipboard-text属性对应值
         new ClipboardJS('.copy');
-        function uploadImg(data, urlList) {
+        //上传一个图片文件
+        async function uploadImg(file, urlList) {
             var formData = new FormData();
-            formData.append("pic", data);
-            axios.post('/upload', formData, {
-                headers: {
-                "Content-Type": "multipart/form-data"
-                }
-            })
-            .then( (res) => {
-                console.log(res.data);
-                urlList.push(res.data);
-                console.log(urlList);
-            })
-            .catch( (err) => {
-                console.log(err);
-            });
-
+            formData.append("pic", file);
+            let url = await new Promise((resolve, reject) => {
+                    axios.post('/upload', formData, {
+                            headers: {
+                                "Content-Type": "multipart/form-data"
+                            }
+                        })
+                        .then((res) => {
+                            resolve(res.data);
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                        });
+                })
+                //返回服务器上对应地址
+            return url;
         }
 
         var vm = new Vue({
             el: "#app",
             data: {
-                urlList:[]
+                urlList: []
             },
             methods: {
-                uploadFile () {
+                async uploadFile() {
+                    //拿到上传的图片
                     var imgs = this.$refs.pic.files;
-                    for(let i = 0; i < imgs.length; i++) {
-                        //逐个获取图片并上传
+                    for (let i = 0; i < imgs.length; i++) {
+                        //逐个获取图片
                         let file = imgs[i];
-                        uploadImg(file, this.$data.urlList);
+                        //使用createObjectURL方法生成图片缩略图预览
+                        let src = window.URL.createObjectURL(file);
+                        //上传该图片到服务器端并拿到返回的服务器端图片地址
+                        let url = await uploadImg(file, this.$data.urlList);
+                        //构造数组
+                        this.$data.urlList.push({
+                            src: src,
+                            name: file.name,
+                            url: "localhost/" + url
+                        });
                     }
                 },
-                downloadURL () {
+                downloadURL() {
                     var imgURLS = [];
                     //设置excel标题
                     imgURLS.push(["序号", "图片名称", "URL链接"]);
                     //获取所有图片url链接信息
                     this.$data.urlList.forEach((item, index) => {
-                        var url = [index+1].concat(item.name, item.url);
-                        imgURLS.push(url);
+                        //构建一个数组
+                        var itemArray = [index + 1].concat(item.name, item.url);
+                        //构建二维数组
+                        imgURLS.push(itemArray);
                     });
                     //生成工作表结构
                     const ws = XLSX.utils.aoa_to_sheet(imgURLS);
                     //设置三列单元格宽度
-                    var wscols = [
-                        {wch:6},
-                        {wch:50},
-                        {wch:50}
-                    ];
+                    var wscols = [{
+                        wch: 6
+                    }, {
+                        wch: 50
+                    }, {
+                        wch: 50
+                    }];
                     ws['!cols'] = wscols;
                     //生成excel基本数据结构
                     const wb = XLSX.utils.book_new();
@@ -124,4 +153,5 @@
         });
     </script>
 </body>
+
 </html>

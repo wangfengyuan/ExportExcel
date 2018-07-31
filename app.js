@@ -18,31 +18,29 @@ app.post("/upload", function(req, res) {
     var form = new formidable.IncomingForm();
 
     form.parse(req, function(err, fields, files) {
-        let imgPath = files.pic.path 
-        let imgName = files.pic.name 
-        // 同步读取文件
-        let data = fs.readFileSync(imgPath) 
-        // 存储上传的图片，同时获取静态图片地址并返回客户端
-        fs.writeFile("static/" + imgName, data, function(err){ 
+        let imgPath = files.pic.path
+        let imgName = files.pic.name
+            // 同步读取文件
+        let data = fs.readFileSync(imgPath)
+            // 存储上传的图片，同时获取静态图片地址并返回客户端
+        fs.writeFile("static/" + imgName, data, function(err) {
+            if (err) {
+                console.log(err)
+                return;
+            }
             let itemUrl = {
-                "name": imgName,
                 "path": "static/" + imgName
             };
-            downloadURL.push(itemUrl);
-            if(err){ 
-                return console.log(err) 
-            }
-            let result = {
-                "url": "static/" + imgName,
-                "name": imgName
-            };
-            res.send(result);
+            // downloadURL.push(itemUrl);
+            // let result = {
+            // "url": "static/" + imgName
+            // };
+            // res.send(result);
+            let url = "static/" + imgName;
+            res.send(url);
         })
     })
 
 });
 
 app.listen(80);
-
-
-
